@@ -16,24 +16,20 @@ let getOk( result: Result<'a, 'b>) =
 let ``Empty Fleet has no vehicles`` () =
     Assert.Equal(0u, count emptyFleet)
     
-[<Fact>]
-let ``Add Car to Fleet`` () = 
-    let addResult = add emptyFleet AvailableCar
-    Assert.Equal(1u , count (getOk addResult))
+[<Property>]
+let ``Add Car to Fleet`` availableCar =
+    let addResult = add availableCar emptyFleet
+
+    Assert.Equal(1u , count addResult)
     
-[<Fact>]
-let ``Remove Car from Empty Fleet have Error`` () = 
-    let RemovedResult = remove emptyFleet AvailableCar
-    Assert.True(RemovedResult.IsError)
+[<Property>]
+let ``Remove Car from Empty Fleet have Error`` availableCar =
+    let removedResult = remove availableCar emptyFleet
+    Assert.True(removedResult.IsError)
  
 [<Property>]
-let ``Add cars to Fleet`` (toAddCars: uint) =
-    let cars = 
-        [1 .. int toAddCars]
-        |> List.map ( fun _ -> AvailableCar)
-        |> List.fold (fun fleet car ->
-            add fleet car |> getOk) emptyFleet
-    count cars = toAddCars
+let ``Add cars to Fleet`` (fleet: Fleet) (car: Car) =
+    count (add car fleet) = count fleet + 1u
 
 let allCars n =
     [1 .. int n]
@@ -44,13 +40,53 @@ let foldCars f fleet cars =
     |> List.fold (fun fleet car ->
     f fleet car |> getOk) fleet
 
-    
 [<Property>]
-let ``Remove cars to Fleet`` (a: uint, b: uint) =
-    let cars =
-        allCars (a + b)
-        |> foldCars add emptyFleet
-    let removedCars =
-        allCars b
-        |> foldCars remove cars
-    count removedCars = a
+let ``Remove cars to Fleet`` (fleet: Fleet) (car: Car) =
+    let newFleet =
+        fleet
+        |> add car
+
+    let result = remove car newFleet
+    result.IsOk
+
+let getGuid (car: Car) : Guid =
+    match car with
+    | AvailableCar (Available guid) -> guid
+    | RentCar (Rent guid) -> guid
+
+let book (car: Available) (fleet: Fleet) : Result<Fleet, Error> =
+
+    let found: Car option =
+        fleet |> find (AvailableCar car)
+
+    match found with
+    | None -> Result.Error "No available car to rent"
+    | Some foundCar ->
+        let without = fleet |> remove foundCar |> getOk
+        let guid = foundCar |> getGuid
+        without
+        |> (add (RentCar (Rent guid)))
+        |> Result.Ok
+
+[<Property>]
+let ``an available car can be rent`` (fleet: Fleet) (car: Available) =
+    let result =
+        fleet
+        |> add (AvailableCar car)
+        |> book car
+    result.IsOk
+
+[<Property>]
+let ``an available car not in the fleet cannot be rent`` (fleet: Fleet) (car: Available) =
+    let result =
+        fleet
+        |> book car
+    result.IsError
+//
+// [<Property>]
+// let ``a not available car can be returned`` (fleet: Fleet) (car: Rent) =
+//     let result =
+//         fleet
+//         |> add (RentCar car)
+//         |> book car
+//     result.IsOk

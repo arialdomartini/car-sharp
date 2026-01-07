@@ -20,20 +20,18 @@ let emptyFleet = Fleet []
 let count (Fleet cars): FleetCount =
     uint cars.Length
 
-let add (Fleet cars) (status: Available): Result<Fleet, Error> =
-    let newFleet = (AvailableCar status)::cars
-    Ok(Fleet newFleet)
-    
-let remove (Fleet cars) (car: Car): Result<Fleet, Error> =
-    match cars with
-    | [] -> Result.Error "Empty Fleet"
-    | cars ->
-        let newFleet = cars.Where((<>) car) |> Seq.toList
-        match newFleet with
-        | x when x = cars -> Result.Error "No Car removed"
-        | _ -> Result.Ok (Fleet newFleet)
+let add (car: Car) (Fleet cars): Fleet =
+    let newFleet = car::cars
+    Fleet newFleet
 
+let findIndex (car: Car) (Fleet cars: Fleet) : int option =
+    List.tryFindIndex ((=) car) cars
 
-// let count (fleet: Fleet): FleetCount =
-//     match fleet with
-//     | Fleet cars -> uint cars.Length
+let find (car: Car) (Fleet cars: Fleet) : Car option =
+    List.tryFind ((=) car) cars
+
+let remove (car: Car) (Fleet cars): Result<Fleet, Error> =
+    match Fleet cars |> findIndex car with
+    | None -> Result.Error "Empty Fleet"
+    | Some ix ->
+        Result.Ok (Fleet (List.removeAt ix cars))

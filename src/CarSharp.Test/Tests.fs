@@ -18,26 +18,26 @@ let ``Empty Fleet has no vehicles`` () =
     
 [<Fact>]
 let ``Add Car to Fleet`` () = 
-    let addResult = add emptyFleet Car
+    let addResult = add emptyFleet AvailableCar
     Assert.Equal(1u , count (getOk addResult))
     
 [<Fact>]
 let ``Remove Car from Empty Fleet have Error`` () = 
-    let RemovedResult = remove emptyFleet Car
+    let RemovedResult = remove emptyFleet AvailableCar
     Assert.True(RemovedResult.IsError)
  
 [<Property>]
 let ``Add cars to Fleet`` (toAddCars: uint) =
     let cars = 
         [1 .. int toAddCars]
-        |> List.map ( fun _ -> Car)
+        |> List.map ( fun _ -> AvailableCar)
         |> List.fold (fun fleet car ->
             add fleet car |> getOk) emptyFleet
     count cars = toAddCars
 
 let allCars n =
     [1 .. int n]
-    |> List.map ( fun _ -> Car)
+    |> List.map ( fun _ -> AvailableCar)
 
 let foldCars f fleet cars =
     cars

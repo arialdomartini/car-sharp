@@ -1,32 +1,11 @@
 ﻿module Tests
 
 open System
+open CarSharp
 open Microsoft.FSharp.Core
 open global.Xunit
 open FsCheck.Xunit
 
-type Car = Car
-type Fleet = Fleet of Car list
-type FleetCount = uint
-type Error = String
-
-let emptyFleet = Fleet []
-
-let count (Fleet cars): FleetCount =
-    uint cars.Length
-
-let add (Fleet cars) (car: Car): Result<Fleet, Error> =
-    let newFleet = car::cars
-    Ok(Fleet newFleet)
-    
-let remove (Fleet cars) (car: Car): Result<Fleet, Error> =
-    match cars with
-    | [] -> Result.Error "Empty Fleet"
-    | (_::tail) -> Result.Ok (Fleet tail)
-    
-// let count (fleet: Fleet): FleetCount =
-//     match fleet with
-//     | Fleet cars -> uint cars.Length
 
 let getOk( result: Result<'a, 'b>) =
     match result with
@@ -50,8 +29,28 @@ let ``Remove Car from Empty Fleet have Error`` () =
 [<Property>]
 let ``Add cars to Fleet`` (toAddCars: uint) =
     let cars = 
-        [1 .. (int) toAddCars]
+        [1 .. int toAddCars]
         |> List.map ( fun _ -> Car)
         |> List.fold (fun fleet car ->
             add fleet car |> getOk) emptyFleet
     count cars = toAddCars
+
+let allCars n =
+    [1 .. int n]
+    |> List.map ( fun _ -> Car)
+
+let foldCars f fleet cars =
+    cars
+    |> List.fold (fun fleet car ->
+    f fleet car |> getOk) fleet
+
+    
+[<Property>]
+let ``Remove cars to Fleet`` (a: uint, b: uint) =
+    let cars =
+        allCars (a + b)
+        |> foldCars add emptyFleet
+    let removedCars =
+        allCars b
+        |> foldCars remove cars
+    count removedCars = a

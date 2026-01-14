@@ -7,10 +7,7 @@ open global.Xunit
 open FsCheck.Xunit
 
 
-let getOk( result: Result<'a, 'b>) =
-    match result with
-    | Ok resultValue -> resultValue
-    | Error errorValue -> failwith "Should be OK"
+
 
 [<Fact>]
 let ``Empty Fleet has no vehicles`` () =
@@ -40,53 +37,39 @@ let foldCars f fleet cars =
     |> List.fold (fun fleet car ->
     f fleet car |> getOk) fleet
 
+let isOk (result: Result<'a, 'b>) = result.IsOk
+
 [<Property>]
 let ``Remove cars to Fleet`` (fleet: Fleet) (car: Car) =
-    let newFleet =
-        fleet
-        |> add car
-
-    let result = remove car newFleet
-    result.IsOk
-
-let getGuid (car: Car) : Guid =
-    match car with
-    | AvailableCar (Available guid) -> guid
-    | RentCar (Rent guid) -> guid
-
-let book (car: Available) (fleet: Fleet) : Result<Fleet, Error> =
-
-    let found: Car option =
-        fleet |> find (AvailableCar car)
-
-    match found with
-    | None -> Result.Error "No available car to rent"
-    | Some foundCar ->
-        let without = fleet |> remove foundCar |> getOk
-        let guid = foundCar |> getGuid
-        without
-        |> (add (RentCar (Rent guid)))
-        |> Result.Ok
+    fleet
+    |> add car
+    |> remove car
+    |> isOk
 
 [<Property>]
 let ``an available car can be rent`` (fleet: Fleet) (car: Available) =
-    let result =
-        fleet
-        |> add (AvailableCar car)
-        |> book car
-    result.IsOk
+    fleet
+    |> add (AvailableCar car)
+    |> rent car
+    |> isOk
 
 [<Property>]
 let ``an available car not in the fleet cannot be rent`` (fleet: Fleet) (car: Available) =
     let result =
         fleet
-        |> book car
+        |> rent car
     result.IsError
-//
+
 // [<Property>]
-// let ``a not available car can be returned`` (fleet: Fleet) (car: Rent) =
+// let ``a rented car can be returned`` (fleet: Fleet) (car: Rent) =
 //     let result =
 //         fleet
 //         |> add (RentCar car)
 //         |> book car
 //     result.IsOk
+
+let ``a rent car `` (fleet: Fleet) (car: Available) =
+    fleet
+    |> add (AvailableCar car)
+    |> rent car
+

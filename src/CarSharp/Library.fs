@@ -176,27 +176,33 @@ let rentRange (BulkOrder availableCars) fleet =
         (Result.Ok fleet)
 
 let rentWithSeats (seats: Seats) (fleet: Fleet) : Result<Fleet * Booking, Error> =
-    let listAllPossible (seats: Seats) (Fleet carList): (Fleet * Booking) =
-        let seatTotal (candidate: Available list): Seats =
-            candidate
-            |> List.sumBy (fun (Available details) -> details.seats.Value)
-            |> Seats.Of
+    let seatTotal (candidate: Available list): Seats =
+        candidate
+        |> List.sumBy (fun (Available details) -> details.seats.Value)
+        |> Seats.Of
 
-        let found =
-            seq {
-                for candidate in availableCarList fleet |> powerSet do
-                    if (seatTotal candidate).Value >= (seats.Value) then
-                        let result = rentRange (BulkOrder candidate) fleet
-                        match result with
-                        | Ok okRes -> yield! [candidate, okRes]
-                        | Error _ -> yield! []
-            }
-
-        let (candidate, remainingFleet) =
+    let bestSolution (found: (Available list * Fleet) list) =
+         let (candidate, remainingFleet) =
             found
             |> Seq.minBy (fun (r: Available list, _) -> (seatTotal r).Value)
 
-        (remainingFleet,
+         (remainingFleet,
          candidate
          |> List.map (fun (Available details) -> Rent details)
          |> Booking)
+
+    let found: (Available list * Fleet) seq =
+        seq {
+            for candidate in availableCarList fleet |> powerSet do
+                if (seatTotal candidate).Value >= seats.Value then
+                    let result = rentRange (BulkOrder candidate) fleet
+                    match result with
+                    | Ok okRes -> yield! [candidate, okRes]
+                    | Error _ -> yield! []
+        }
+
+    let foundList = List.ofSeq found
+
+    match foundList with
+    | [] -> Result.Error "no solution found"
+    | _ -> Result.Ok <| bestSolution foundList

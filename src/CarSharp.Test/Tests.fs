@@ -73,3 +73,24 @@ let ``a rent car `` (fleet: Fleet) (car: Available) =
     |> add (AvailableCar car)
     |> rent car
 
+
+
+[<Fact>]
+let ``power set works``() =
+    Assert.Equivalent([[]; [1]; [2]; [3]; [1; 3]; [2; 3]; [1; 2]; [1; 2; 3]], powerSet [1; 2; 3])
+
+
+
+[<Property>]
+let ``an bulk available car can be bulk rent`` (fleet: Fleet) (bulkOrder: BulkOrder) =
+    let (BulkOrder availableCars) = bulkOrder
+    let availables = List.map AvailableCar availableCars
+
+    fleet
+    |> addRange availables
+    |> rentRange bulkOrder
+    |> isOk
+
+[<Property>]
+let ``all PositiveNumber instances are at least 1`` (op: Seats) =
+    op.Value > 0u
